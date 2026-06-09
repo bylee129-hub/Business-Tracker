@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="Activity Tracker" />
+  <meta name="theme-color" content="#ffffff" />
+  <title>Activity Tracker</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+    :root {
+      --bg: #ffffff; --bg-sec: #f5f5f4; --bg-ter: #eeece9;
+      --text: #1a1a1a; --text-sec: #6b6b6b; --text-ter: #b0b0b0;
+      --border: rgba(0,0,0,0.09); --border-med: rgba(0,0,0,0.16);
+      --radius-md: 10px; --radius-lg: 14px; --radius-xl: 20px;
+      --badge-m-bg: #E6F1FB; --badge-m-text: #0C447C;
+      --badge-s-bg: #E1F5EE; --badge-s-text: #0F6E56;
+      --danger: #c0392b; --blue: #185FA5; --green: #0F6E56; --amber: #BA7517;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #1c1c1e; --bg-sec: #2c2c2e; --bg-ter: #3a3a3c;
+        --text: #f2f2f7; --text-sec: #aeaeb2; --text-ter: #636366;
+        --border: rgba(255,255,255,0.09); --border-med: rgba(255,255,255,0.16);
+        --badge-m-bg: #0c2a45; --badge-m-text: #7eb8f5;
+        --badge-s-bg: #062e22; --badge-s-text: #4ecba3;
+        --danger: #ff6b6b; --blue: #7eb8f5; --green: #4ecba3; --amber: #f5c55a;
+      }
+    }
+    html, body { height: 100%; background: var(--bg-sec); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+
+    /* SVG icons */
+    .icon { display: inline-flex; align-items: center; justify-content: center; vertical-align: middle; }
+    .icon svg { width: 1em; height: 1em; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+    /* Bottom nav */
+    .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; background: var(--bg); border-top: 0.5px solid var(--border-med); display: flex; z-index: 50; max-width: 480px; margin: 0 auto; }
+    .nav-btn { flex: 1; padding: 10px 4px 14px; border: none; background: none; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 3px; color: var(--text-ter); font-size: 10px; font-family: inherit; font-weight: 500; }
+    .nav-btn .icon { font-size: 22px; }
+    .nav-btn.active { color: var(--text); }
+
+    /* Pages */
+    .page { display: none; max-width: 480px; margin: 0 auto; padding: 0 16px 90px; }
+    .page.active { display: block; }
+    .page-header { padding: 18px 0 10px; }
+    .page-title { font-size: 22px; font-weight: 700; color: var(--text); letter-spacing: -0.3px; }
+    .page-sub { font-size: 13px; color: var(--text-sec); margin-top: 2px; }
+
+    /* Home summary */
+    .total-card { background: var(--bg); border-radius: var(--radius-lg); padding: 16px; border: 0.5px solid var(--border); margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between; }
+    .total-left .total-label { font-size: 13px; color: var(--text-sec); }
+    .total-left .total-value { font-size: 44px; font-weight: 700; color: var(--text); line-height: 1.1; }
+    .total-right { text-align: right; }
+    .total-right .month-label { font-size: 12px; color: var(--text-sec); }
+    .total-right .month-value { font-size: 28px; font-weight: 700; color: var(--text); }
+    .summary-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
+    .sum-card { background: var(--bg); border-radius: var(--radius-lg); padding: 14px; border: 0.5px solid var(--border); }
+    .sum-icon { font-size: 22px; margin-bottom: 8px; }
+    .sum-label { font-size: 12px; color: var(--text-sec); margin-bottom: 4px; }
+    .sum-value { font-size: 32px; font-weight: 700; color: var(--text); line-height: 1; }
+    .sum-sub { font-size: 12px; color: var(--text-ter); margin-top: 4px; }
+
+    /* Month scroller */
+    .month-scroller { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; margin-bottom: 14px; scrollbar-width: none; }
+    .month-scroller::-webkit-scrollbar { display: none; }
+    .month-chip { flex-shrink: 0; padding: 7px 14px; border-radius: 99px; border: 0.5px solid var(--border-med); background: var(--bg); font-size: 13px; font-weight: 500; color: var(--text-sec); cursor: pointer; white-space: nowrap; }
+    .month-chip.active { background: var(--text); color: var(--bg); border-color: var(--text); }
+
+    /* Tab bar */
+    .tab-bar { display: flex; background: var(--bg-sec); border-radius: var(--radius-lg); padding: 4px; margin: 0 0 14px; gap: 4px; }
+    .tab-btn { flex: 1; padding: 11px 6px; border: none; background: none; border-radius: var(--radius-md); font-size: 13px; font-weight: 500; color: var(--text-sec); cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 5px; transition: background 0.15s, color 0.15s; font-family: inherit; }
+    .tab-btn .icon { font-size: 17px; }
+    .tab-btn.active { background: var(--bg); color: var(--text); border: 0.5px solid var(--border-med); }
+
+    /* Records */
+    .list-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+    .list-label { font-size: 13px; color: var(--text-sec); font-weight: 500; }
+    .clear-btn { font-size: 13px; color: var(--danger); background: none; border: none; cursor: pointer; padding: 6px 0; font-family: inherit; }
+    .record-list { display: flex; flex-direction: column; gap: 10px; }
+    .record-card { background: var(--bg); border: 0.5px solid var(--border); border-radius: var(--radius-lg); padding: 14px 14px 12px; }
+    .rc-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
+    .rc-name { font-size: 15px; font-weight: 600; color: var(--text); line-height: 1.3; }
+    .rc-company { font-size: 13px; color: var(--text-sec); margin-top: 2px; }
+    .rc-right { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; flex-shrink: 0; }
+    .rc-date { font-size: 11px; color: var(--text-ter); white-space: nowrap; }
+    .del-btn { background: none; border: none; cursor: pointer; color: var(--text-ter); font-size: 20px; padding: 4px; display: flex; align-items: center; }
+    .rc-meta { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+    .badge { font-size: 11px; padding: 3px 10px; border-radius: 99px; font-weight: 500; }
+    .badge-m { background: var(--badge-m-bg); color: var(--badge-m-text); }
+    .badge-s { background: var(--badge-s-bg); color: var(--badge-s-text); }
+    .badge-o { background: var(--bg-sec); color: var(--text-sec); border: 0.5px solid var(--border); }
+    .rc-note { font-size: 13px; color: var(--text-sec); margin-top: 8px; line-height: 1.5; border-top: 0.5px solid var(--border); padding-top: 8px; }
+    .empty { text-align: center; padding: 3rem 0 2rem; color: var(--text-ter); font-size: 14px; line-height: 1.8; }
+    .empty .icon { font-size: 44px; display: flex; margin: 0 auto 10px; }
+
+    /* Analysis */
+    .analysis-section { margin-bottom: 20px; }
+    .section-title { font-size: 12px; font-weight: 600; color: var(--text-sec); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 10px; }
+    .ana-card { background: var(--bg); border: 0.5px solid var(--border); border-radius: var(--radius-lg); padding: 14px; margin-bottom: 10px; }
+    .ana-row { display: flex; align-items: center; justify-content: space-between; padding: 6px 0; border-bottom: 0.5px solid var(--border); }
+    .ana-row:last-child { border-bottom: none; padding-bottom: 0; }
+    .ana-row:first-child { padding-top: 0; }
+    .ana-label { font-size: 14px; color: var(--text); display: flex; align-items: center; gap: 8px; }
+    .ana-label .icon { font-size: 17px; color: var(--text-sec); }
+    .ana-val { font-size: 14px; font-weight: 600; color: var(--text); }
+    .bar-row { display: flex; flex-direction: column; gap: 10px; }
+    .bar-item { display: flex; flex-direction: column; gap: 5px; }
+    .bar-top { display: flex; justify-content: space-between; font-size: 13px; }
+    .bar-name { color: var(--text); font-weight: 500; }
+    .bar-count { color: var(--text-sec); }
+    .bar-track { height: 7px; background: var(--bg-sec); border-radius: 4px; overflow: hidden; }
+    .bar-fill { height: 100%; border-radius: 4px; }
+    .bar-fill.blue { background: var(--blue); }
+    .bar-fill.green { background: var(--green); }
+    .bar-fill.amber { background: var(--amber); }
+    .month-table { width: 100%; border-collapse: collapse; }
+    .month-table th { font-size: 11px; color: var(--text-sec); font-weight: 600; text-align: left; padding: 6px 0; border-bottom: 0.5px solid var(--border-med); }
+    .month-table th:not(:first-child) { text-align: right; }
+    .month-table td { font-size: 13px; padding: 9px 0; border-bottom: 0.5px solid var(--border); color: var(--text); }
+    .month-table td:not(:first-child) { text-align: right; font-weight: 500; }
+    .month-table tr:last-child td { border-bottom: none; }
+
+    /* Export */
+    .export-row { display: flex; gap: 8px; margin-top: 16px; }
+    .export-btn { flex: 1; padding: 13px 8px; border: 0.5px solid var(--border-med); border-radius: var(--radius-md); background: var(--bg-sec); font-size: 13px; font-weight: 500; cursor: pointer; color: var(--text-sec); display: flex; align-items: center; justify-content: center; gap: 6px; font-family: inherit; }
+    .export-btn:active { opacity: 0.6; }
+
+    /* FAB */
+    .fab { position: fixed; bottom: 72px; right: 20px; width: 54px; height: 54px; border-radius: 50%; background: var(--text); border: none; display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 100; }
+    .fab .icon { font-size: 26px; color: var(--bg); }
+    .fab:active { transform: scale(0.93); }
+
+    /* Sheet */
+    .overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 200; }
+    .overlay.open { display: block; }
+    .sheet { position: fixed; bottom: 0; left: 0; right: 0; max-width: 480px; margin: 0 auto; background: var(--bg); border-radius: var(--radius-xl) var(--radius-xl) 0 0; padding: 0 16px 40px; z-index: 201; transform: translateY(100%); transition: transform 0.28s cubic-bezier(0.32,0.72,0,1); max-height: 92vh; overflow-y: auto; }
+    .sheet.open { transform: translateY(0); }
+    .sheet-handle { width: 36px; height: 4px; background: var(--border-med); border-radius: 2px; margin: 12px auto 16px; }
+    .sheet-type-row { display: flex; gap: 8px; margin-bottom: 16px; }
+    .stype-btn { flex: 1; padding: 10px; border-radius: var(--radius-md); border: 0.5px solid var(--border-med); background: var(--bg-sec); font-size: 14px; font-weight: 600; cursor: pointer; font-family: inherit; color: var(--text-sec); display: flex; align-items: center; justify-content: center; gap: 6px; }
+    .stype-btn .icon { font-size: 17px; }
+    .stype-btn.active { background: var(--text); color: var(--bg); border-color: var(--text); }
+    .field { display: flex; flex-direction: column; gap: 7px; margin-bottom: 14px; }
+    .field label { font-size: 12px; font-weight: 600; color: var(--text-sec); letter-spacing: 0.03em; text-transform: uppercase; }
+    .field input, .field select, .field textarea { font-family: inherit; font-size: 16px; border-radius: var(--radius-md); border: 0.5px solid var(--border-med); background: var(--bg-sec); color: var(--text); padding: 13px 14px; width: 100%; appearance: none; -webkit-appearance: none; }
+    .field select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%236b6b6b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 14px center; padding-right: 40px; }
+    .field textarea { min-height: 80px; resize: none; line-height: 1.5; }
+    .field input:focus, .field select:focus, .field textarea:focus { outline: none; border-color: var(--text-sec); background: var(--bg); }
+    .save-btn { width: 100%; padding: 16px; background: var(--text); border: none; border-radius: var(--radius-lg); font-size: 16px; font-weight: 600; cursor: pointer; color: var(--bg); margin-top: 6px; font-family: inherit; display: flex; align-items: center; justify-content: center; gap: 8px; }
+    .save-btn:active { opacity: 0.8; }
+    .save-btn .icon { font-size: 20px; }
+  </style>
+</head>
+<body>
+
+<!-- HOME -->
+<div class="page active" id="page-home">
+  <div class="page-header">
+    <div class="page-title">Activity Tracker</div>
+    <div class="page-sub">Sales activity record</div>
+  </div>
+  <div class="total-card">
+    <div class="total-left">
+      <div class="total-label">Total activities</div>
+      <div class="total-value" id="home-total">0</div>
+    </div>
+    <div class="total-right">
+      <div class="month-label" id="home-month-label">This month</div>
+      <div class="month-value" id="home-month-val">0</div>
+    </div>
+  </div>
+  <div class="summary-grid">
+    <div class="sum-card">
+      <div class="sum-icon" style="color:var(--blue)">
+        <span class="icon"><!-- briefcase -->
+          <svg viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/><line x1="12" y1="12" x2="12" y2="12"/><path d="M2 12h20"/></svg>
+        </span>
+      </div>
+      <div class="sum-label">Business meetings</div>
+      <div class="sum-value" id="home-mtg">0</div>
+      <div class="sum-sub" id="home-mtg-month">0 this month</div>
+    </div>
+    <div class="sum-card">
+      <div class="sum-icon" style="color:var(--green)">
+        <span class="icon"><!-- users -->
+          <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        </span>
+      </div>
+      <div class="sum-label">Social & networking</div>
+      <div class="sum-value" id="home-soc">0</div>
+      <div class="sum-sub" id="home-soc-month">0 this month</div>
+    </div>
+  </div>
+  <div class="section-title" style="margin-bottom:10px">Monthly breakdown</div>
+  <div id="home-monthly-table"></div>
+</div>
+
+<!-- RECORDS -->
+<div class="page" id="page-records">
+  <div class="page-header"><div class="page-title">Records</div></div>
+  <div class="tab-bar">
+    <button class="tab-btn active" onclick="switchRecordTab('all')" id="rtab-all">
+      <span class="icon"><svg viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg></span> All
+    </button>
+    <button class="tab-btn" onclick="switchRecordTab('meeting')" id="rtab-meeting">
+      <span class="icon"><svg viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/><path d="M2 12h20"/></svg></span> Meetings
+    </button>
+    <button class="tab-btn" onclick="switchRecordTab('social')" id="rtab-social">
+      <span class="icon"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span> Social
+    </button>
+  </div>
+  <div class="month-scroller" id="record-month-filter"></div>
+  <div class="list-header">
+    <span class="list-label" id="record-list-label">Records</span>
+    <button class="clear-btn" onclick="clearFiltered()">Clear filtered</button>
+  </div>
+  <div class="record-list" id="record-list"></div>
+  <div class="export-row">
+    <button class="export-btn" onclick="exportCSV()">
+      <span class="icon"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></span> Export CSV
+    </button>
+    <button class="export-btn" onclick="exportJSON()">
+      <span class="icon"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></span> Export JSON
+    </button>
+  </div>
+</div>
+
+<!-- ANALYSIS -->
+<div class="page" id="page-analysis">
+  <div class="page-header">
+    <div class="page-title">Analysis</div>
+    <div class="page-sub" id="ana-sub">All time</div>
+  </div>
+  <div class="month-scroller" id="ana-month-filter"></div>
+  <div id="analysis-content"></div>
+</div>
+
+<!-- FAB -->
+<button class="fab" id="fab" onclick="openSheet()" aria-label="Add record" style="display:none">
+  <span class="icon"><svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></span>
+</button>
+
+<!-- Bottom Nav -->
+<div class="bottom-nav">
+  <button class="nav-btn active" onclick="switchPage('home')" id="nav-home">
+    <span class="icon"><svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></span>Home
+  </button>
+  <button class="nav-btn" onclick="switchPage('records')" id="nav-records">
+    <span class="icon"><svg viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg></span>Records
+  </button>
+  <button class="nav-btn" onclick="switchPage('analysis')" id="nav-analysis">
+    <span class="icon"><svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></span>Analysis
+  </button>
+</div>
+
+<!-- Overlay + Sheet -->
+<div class="overlay" id="overlay" onclick="closeSheet()"></div>
+<div class="sheet" id="sheet">
+  <div class="sheet-handle"></div>
+  <div id="sheet-content"></div>
+</div>
+
+<script>
+var STORAGE_KEY = 'activity_tracker_v2';
+var currentPage = 'home';
+var currentRecordTab = 'all';
+var currentRecordMonth = 'all';
+var currentAnaMonth = 'all';
+var addType = 'meeting';
+
+var MEETING_OUTCOMES = ['Proposal sent','Follow-up scheduled','Deal closed','No decision','Ongoing discussion'];
+var SOCIAL_OUTCOMES  = ['Exchanged contacts','Follow-up planned','Referral received','Collaboration potential','Casual connect'];
+var MONTH_NAMES = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+var MONTH_FULL  = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+var DAY_NAMES   = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+
+/* icons as inline SVG strings */
+var IC = {
+  activity:  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>',
+  briefcase: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/><path d="M2 12h20"/></svg>',
+  users:     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>',
+  check:     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>',
+  calendar:  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>',
+  star:      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>',
+  trash:     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>',
+  save:      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>',
+  inbox:     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg>',
+  chart:     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>'
+};
+function ic(name, size) { return '<span class="icon" style="font-size:'+(size||17)+'px">'+IC[name]+'</span>'; }
+
+/* Storage */
+function load() { try { return JSON.parse(localStorage.getItem(STORAGE_KEY)||'[]'); } catch(e) { return []; } }
+function save(r) { localStorage.setItem(STORAGE_KEY, JSON.stringify(r)); }
+function genId() { return Date.now().toString(36)+Math.random().toString(36).slice(2,6); }
+function today() { return new Date().toISOString().slice(0,10); }
+function fmtDate(d) { if(!d) return ''; var p=d.split('-'); return p[2]+'/'+p[1]+'/'+p[0]; }
+function escHtml(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function getMonthKey(d) { return d ? d.slice(0,7) : ''; }
+function monthLabel(k) { if(!k) return ''; var p=k.split('-'); return MONTH_NAMES[parseInt(p[1],10)-1]+' '+p[0]; }
+function thisMonthKey() { var n=new Date(); return n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0'); }
+function getMonths(records) { var s={}; records.forEach(function(r){ if(r.date) s[getMonthKey(r.date)]=true; }); return Object.keys(s).sort().reverse(); }
+
+/* Page navigation */
+function switchPage(page) {
+  currentPage = page;
+  document.querySelectorAll('.page').forEach(function(p){ p.classList.remove('active'); });
+  document.querySelectorAll('.nav-btn').forEach(function(b){ b.classList.remove('active'); });
+  document.getElementById('page-'+page).classList.add('active');
+  document.getElementById('nav-'+page).classList.add('active');
+  document.getElementById('fab').style.display = (page==='records') ? 'flex' : 'none';
+  if (page==='home') renderHome();
+  if (page==='records') renderRecordsPage();
+  if (page==='analysis') renderAnalysisPage();
+}
+
+/* Sheet */
+function openSheet() {
+  var isMeeting = addType==='meeting';
+  var outcomes = isMeeting ? MEETING_OUTCOMES : SOCIAL_OUTCOMES;
+  document.getElementById('sheet-content').innerHTML =
+    '<div class="sheet-type-row">' +
+      '<button class="stype-btn'+(isMeeting?' active':'')+'" onclick="setAddType(\'meeting\')">' +
+        ic('briefcase')+' Meeting</button>' +
+      '<button class="stype-btn'+(!isMeeting?' active':'')+'" onclick="setAddType(\'social\')">' +
+        ic('users')+' Social</button>' +
+    '</div>' +
+    '<div class="field"><label>Date</label><input type="date" id="f-date" value="'+today()+'"></div>' +
+    '<div class="field"><label>Contact name</label><input type="text" id="f-name" placeholder="'+(isMeeting?'e.g. Ahmad Razif':'e.g. Sarah Lim')+'" autocomplete="off" autocorrect="off" autocapitalize="words"></div>' +
+    '<div class="field"><label>'+(isMeeting?'Company':'Event / Venue')+'</label><input type="text" id="f-company" placeholder="'+(isMeeting?'Company name':'Where did you meet?')+'" autocomplete="off"></div>' +
+    '<div class="field"><label>Outcome</label><select id="f-outcome"><option value="">— Select outcome —</option>'+outcomes.map(function(o){ return '<option>'+o+'</option>'; }).join('')+'</select></div>' +
+    '<div class="field"><label>Notes</label><textarea id="f-notes" placeholder="Notes, follow-up actions..."></textarea></div>' +
+    '<button class="save-btn" onclick="addRecord()">'+ic('save',20)+' Save record</button>';
+  document.getElementById('overlay').classList.add('open');
+  document.getElementById('sheet').classList.add('open');
+  setTimeout(function(){ var el=document.getElementById('f-name'); if(el) el.focus(); }, 320);
+}
+
+function setAddType(type) { addType=type; openSheet(); }
+
+function closeSheet() {
+  document.getElementById('overlay').classList.remove('open');
+  document.getElementById('sheet').classList.remove('open');
+}
+
+function addRecord() {
+  var name = document.getElementById('f-name').value.trim();
+  if (!name) { document.getElementById('f-name').focus(); return; }
+  var records = load();
+  records.unshift({ id:genId(), type:addType, date:document.getElementById('f-date').value, name:name, company:document.getElementById('f-company').value.trim(), outcome:document.getElementById('f-outcome').value, notes:document.getElementById('f-notes').value.trim() });
+  save(records);
+  closeSheet();
+  if(currentPage==='home') renderHome();
+  if(currentPage==='records') renderRecordsPage();
+  if(currentPage==='analysis') renderAnalysisPage();
+}
+
+function deleteRecord(id) {
+  if(!confirm('Delete this record?')) return;
+  save(load().filter(function(r){ return r.id!==id; }));
+  renderRecordsPage();
+}
+
+function clearFiltered() {
+  var label = currentRecordTab==='meeting'?'Meeting':currentRecordTab==='social'?'Social':'all';
+  var monthStr = currentRecordMonth==='all'?'':' for '+monthLabel(currentRecordMonth);
+  if(!confirm('Clear '+label+' records'+monthStr+'?')) return;
+  save(load().filter(function(r){
+    var typeOk = currentRecordTab==='all' ? true : r.type===currentRecordTab;
+    var monthOk = currentRecordMonth==='all' ? true : getMonthKey(r.date)===currentRecordMonth;
+    return !(typeOk && monthOk);
+  }));
+  renderRecordsPage();
+}
+
+/* HOME */
+function renderHome() {
+  var all = load();
+  var tm = thisMonthKey();
+  var mn = new Date();
+  document.getElementById('home-total').textContent = all.length;
+  document.getElementById('home-month-val').textContent = all.filter(function(r){ return getMonthKey(r.date)===tm; }).length;
+  document.getElementById('home-month-label').textContent = MONTH_FULL[mn.getMonth()];
+  var mtgAll = all.filter(function(r){ return r.type==='meeting'; }).length;
+  var mtgMo  = all.filter(function(r){ return r.type==='meeting'&&getMonthKey(r.date)===tm; }).length;
+  var socAll = all.filter(function(r){ return r.type==='social'; }).length;
+  var socMo  = all.filter(function(r){ return r.type==='social'&&getMonthKey(r.date)===tm; }).length;
+  document.getElementById('home-mtg').textContent = mtgAll;
+  document.getElementById('home-mtg-month').textContent = mtgMo+' this month';
+  document.getElementById('home-soc').textContent = socAll;
+  document.getElementById('home-soc-month').textContent = socMo+' this month';
+
+  var months = getMonths(all);
+  if (!months.length) {
+    document.getElementById('home-monthly-table').innerHTML = '<div class="empty">'+ic('inbox',36)+'No data yet.<br>Go to Records to add your first activity.</div>';
+    return;
+  }
+  var html = '<div class="ana-card"><table class="month-table"><thead><tr><th>Month</th><th>Meetings</th><th>Social</th><th>Total</th></tr></thead><tbody>';
+  months.forEach(function(mk){
+    var m = all.filter(function(r){ return getMonthKey(r.date)===mk; });
+    var mt = m.filter(function(r){ return r.type==='meeting'; }).length;
+    var sc = m.filter(function(r){ return r.type==='social'; }).length;
+    html += '<tr><td>'+monthLabel(mk)+'</td><td>'+mt+'</td><td>'+sc+'</td><td><strong>'+(mt+sc)+'</strong></td></tr>';
+  });
+  html += '</tbody></table></div>';
+  document.getElementById('home-monthly-table').innerHTML = html;
+}
+
+/* RECORDS */
+function switchRecordTab(tab) {
+  currentRecordTab = tab;
+  ['all','meeting','social'].forEach(function(t){ document.getElementById('rtab-'+t).classList.toggle('active', t===tab); });
+  renderRecordList();
+}
+
+function renderMonthFilter(containerId, cur, fn) {
+  var months = getMonths(load());
+  var html = '<div class="month-chip'+(cur==='all'?' active':'')+'" onclick="'+fn+'(\'all\')">All time</div>';
+  months.forEach(function(mk){ html += '<div class="month-chip'+(cur===mk?' active':'')+'" onclick="'+fn+'(\''+mk+'\')">'+monthLabel(mk)+'</div>'; });
+  document.getElementById(containerId).innerHTML = html;
+}
+
+function setRecordMonth(mk) { currentRecordMonth=mk; renderMonthFilter('record-month-filter',mk,'setRecordMonth'); renderRecordList(); }
+function setAnaMonth(mk)    { currentAnaMonth=mk;    renderMonthFilter('ana-month-filter',mk,'setAnaMonth'); renderAnalysisContent(); document.getElementById('ana-sub').textContent = mk==='all'?'All time':monthLabel(mk); }
+
+function renderRecordsPage() { renderMonthFilter('record-month-filter',currentRecordMonth,'setRecordMonth'); renderRecordList(); }
+
+function renderRecordList() {
+  var filtered = load().filter(function(r){
+    return (currentRecordTab==='all'||r.type===currentRecordTab) && (currentRecordMonth==='all'||getMonthKey(r.date)===currentRecordMonth);
+  });
+  document.getElementById('record-list-label').textContent = filtered.length+' record'+(filtered.length!==1?'s':'');
+  var el = document.getElementById('record-list');
+  if (!filtered.length) { el.innerHTML='<div class="empty">'+ic('inbox',36)+'No records found.<br>Tap + to add one.</div>'; return; }
+  el.innerHTML = filtered.map(function(r){
+    var isM = r.type==='meeting';
+    return '<div class="record-card">'+
+      '<div class="rc-top"><div>'+
+        '<div class="rc-name">'+escHtml(r.name||'—')+'</div>'+
+        (r.company?'<div class="rc-company">'+escHtml(r.company)+'</div>':'')+
+      '</div><div class="rc-right">'+
+        '<span class="rc-date">'+fmtDate(r.date)+'</span>'+
+        '<button class="del-btn" onclick="deleteRecord(\''+r.id+'\')">'+ic('trash',18)+'</button>'+
+      '</div></div>'+
+      '<div class="rc-meta">'+
+        '<span class="badge '+(isM?'badge-m':'badge-s')+'">'+(isM?'Meeting':'Social')+'</span>'+
+        (r.outcome?'<span class="badge badge-o">'+escHtml(r.outcome)+'</span>':'')+
+      '</div>'+
+      (r.notes?'<div class="rc-note">'+escHtml(r.notes)+'</div>':'')+
+      '</div>';
+  }).join('');
+}
+
+/* ANALYSIS */
+function renderAnalysisPage() { renderMonthFilter('ana-month-filter',currentAnaMonth,'setAnaMonth'); renderAnalysisContent(); }
+
+function renderAnalysisContent() {
+  var all = load();
+  var records = currentAnaMonth==='all' ? all : all.filter(function(r){ return getMonthKey(r.date)===currentAnaMonth; });
+  document.getElementById('ana-sub').textContent = currentAnaMonth==='all'?'All time':monthLabel(currentAnaMonth);
+
+  if (!records.length) { document.getElementById('analysis-content').innerHTML='<div class="empty">'+ic('chart',36)+'No data to analyse yet.</div>'; return; }
+
+  var mtg = records.filter(function(r){ return r.type==='meeting'; });
+  var soc = records.filter(function(r){ return r.type==='social'; });
+  var total = records.length;
+  var maxType = Math.max(mtg.length, soc.length, 1);
+
+  var outcomeCounts = {};
+  records.forEach(function(r){ if(r.outcome) outcomeCounts[r.outcome]=(outcomeCounts[r.outcome]||0)+1; });
+  var outcomeEntries = Object.keys(outcomeCounts).map(function(k){ return [k,outcomeCounts[k]]; }).sort(function(a,b){ return b[1]-a[1]; });
+  var maxOutcome = outcomeEntries.length ? outcomeEntries[0][1] : 1;
+
+  var contactCounts = {};
+  records.forEach(function(r){ if(r.name) contactCounts[r.name]=(contactCounts[r.name]||0)+1; });
+  var topContacts = Object.keys(contactCounts).map(function(k){ return [k,contactCounts[k]]; }).sort(function(a,b){ return b[1]-a[1]; }).slice(0,5);
+  var maxContact = topContacts.length ? topContacts[0][1] : 1;
+
+  var withOutcome = records.filter(function(r){ return r.outcome; }).length;
+  var convRate = total>0 ? Math.round((withOutcome/total)*100) : 0;
+
+  var dayCounts = {0:0,1:0,2:0,3:0,4:0,5:0,6:0};
+  records.forEach(function(r){ if(r.date){ var d=new Date(r.date+'T00:00:00'); dayCounts[d.getDay()]++; } });
+  var bestDayIdx = parseInt(Object.keys(dayCounts).sort(function(a,b){ return dayCounts[b]-dayCounts[a]; })[0], 10);
+
+  /* trend — last 6 months, all-time only */
+  var trendHtml = '';
+  if (currentAnaMonth==='all') {
+    var tMonths = getMonths(all).slice(0,6).reverse();
+    if (tMonths.length>1) {
+      var maxM = 1;
+      tMonths.forEach(function(mk){ var c=all.filter(function(r){ return getMonthKey(r.date)===mk; }).length; if(c>maxM) maxM=c; });
+      trendHtml = '<div class="analysis-section"><div class="section-title">Monthly trend (last 6 months)</div><div class="ana-card"><div class="bar-row">';
+      tMonths.forEach(function(mk){
+        var m2 = all.filter(function(r){ return getMonthKey(r.date)===mk; });
+        var mt2=m2.filter(function(r){ return r.type==='meeting'; }).length;
+        var sc2=m2.filter(function(r){ return r.type==='social'; }).length;
+        var pct=Math.round(((mt2+sc2)/maxM)*100);
+        trendHtml += '<div class="bar-item"><div class="bar-top"><span class="bar-name">'+monthLabel(mk)+'</span><span class="bar-count">'+mt2+' M · '+sc2+' S</span></div><div class="bar-track"><div class="bar-fill blue" style="width:'+pct+'%"></div></div></div>';
+      });
+      trendHtml += '</div></div></div>';
+    }
+  }
+
+  var html =
+    '<div class="analysis-section"><div class="section-title">Overview</div><div class="ana-card">'+
+      '<div class="ana-row"><div class="ana-label">'+ic('activity')+' Total activities</div><div class="ana-val">'+total+'</div></div>'+
+      '<div class="ana-row"><div class="ana-label">'+ic('briefcase')+' Business meetings</div><div class="ana-val">'+mtg.length+'</div></div>'+
+      '<div class="ana-row"><div class="ana-label">'+ic('users')+' Social & networking</div><div class="ana-val">'+soc.length+'</div></div>'+
+      '<div class="ana-row"><div class="ana-label">'+ic('check')+' Outcome recorded</div><div class="ana-val">'+convRate+'%</div></div>'+
+      '<div class="ana-row"><div class="ana-label">'+ic('calendar')+' Most active day</div><div class="ana-val">'+DAY_NAMES[bestDayIdx]+'</div></div>'+
+    '</div></div>'+
+
+    '<div class="analysis-section"><div class="section-title">Activity split</div><div class="ana-card"><div class="bar-row">'+
+      '<div class="bar-item"><div class="bar-top"><span class="bar-name">Business meetings</span><span class="bar-count">'+mtg.length+'</span></div><div class="bar-track"><div class="bar-fill blue" style="width:'+Math.round((mtg.length/maxType)*100)+'%"></div></div></div>'+
+      '<div class="bar-item"><div class="bar-top"><span class="bar-name">Social & networking</span><span class="bar-count">'+soc.length+'</span></div><div class="bar-track"><div class="bar-fill green" style="width:'+Math.round((soc.length/maxType)*100)+'%"></div></div></div>'+
+    '</div></div></div>'+
+
+    trendHtml +
+
+    (outcomeEntries.length ?
+      '<div class="analysis-section"><div class="section-title">Outcomes breakdown</div><div class="ana-card"><div class="bar-row">'+
+      outcomeEntries.map(function(e){ return '<div class="bar-item"><div class="bar-top"><span class="bar-name">'+escHtml(e[0])+'</span><span class="bar-count">'+e[1]+'</span></div><div class="bar-track"><div class="bar-fill amber" style="width:'+Math.round((e[1]/maxOutcome)*100)+'%"></div></div></div>'; }).join('')+
+      '</div></div></div>' : '') +
+
+    (topContacts.length ?
+      '<div class="analysis-section"><div class="section-title">Most met contacts</div><div class="ana-card"><div class="bar-row">'+
+      topContacts.map(function(e){ return '<div class="bar-item"><div class="bar-top"><span class="bar-name">'+escHtml(e[0])+'</span><span class="bar-count">'+e[1]+'x</span></div><div class="bar-track"><div class="bar-fill blue" style="width:'+Math.round((e[1]/maxContact)*100)+'%"></div></div></div>'; }).join('')+
+      '</div></div></div>' : '');
+
+  document.getElementById('analysis-content').innerHTML = html;
+}
+
+/* Export */
+function getFiltered() {
+  return load().filter(function(r){
+    return (currentRecordTab==='all'||r.type===currentRecordTab) && (currentRecordMonth==='all'||getMonthKey(r.date)===currentRecordMonth);
+  });
+}
+function exportCSV() {
+  var f=getFiltered(); if(!f.length){ alert('No records to export.'); return; }
+  var header='Type,Date,Name,Company / Event,Outcome,Notes';
+  var rows=f.map(function(r){ return [r.type,r.date,r.name,r.company,r.outcome,r.notes].map(function(v){ return '"'+(v||'').replace(/"/g,'""')+'"'; }).join(','); });
+  var blob=new Blob([[header].concat(rows).join('\n')],{type:'text/csv'});
+  var a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='activity_records.csv'; a.click(); URL.revokeObjectURL(a.href);
+}
+function exportJSON() {
+  var f=getFiltered(); if(!f.length){ alert('No records to export.'); return; }
+  var blob=new Blob([JSON.stringify(f,null,2)],{type:'application/json'});
+  var a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='activity_records.json'; a.click(); URL.revokeObjectURL(a.href);
+}
+
+/* Init */
+renderHome();
+</script>
+</body>
+</html>

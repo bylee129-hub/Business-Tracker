@@ -422,6 +422,7 @@ function renderMonthFilter(containerId, cur, fn) {
   document.getElementById(containerId).innerHTML = html;
 }
 
+  
 function setRecordMonth(mk) { currentRecordMonth=mk; renderMonthFilter('record-month-filter',mk,'setRecordMonth'); renderRecordList(); }
 function setAnaMonth(mk)    { currentAnaMonth=mk;    renderMonthFilter('ana-month-filter',mk,'setAnaMonth'); renderAnalysisContent(); document.getElementById('ana-sub').textContent = mk==='all'?'All time':monthLabel(mk); }
 
